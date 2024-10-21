@@ -3,8 +3,9 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import ToDoItem from './components/ToDoItem';
 import AddItemButton from './components/AddItemButton';
 import FilterButton from './components/FilterButton';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ToDoInput from './components/ToDoInput';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
@@ -66,6 +67,36 @@ export default function App() {
     endAddToDoItemHandler();
   }
 
+  async function saveToDoItems(items) {
+    try {
+      const jsonValue = JSON.stringify(items);
+      await AsyncStorage.setItem('toDoItems', jsonValue);
+    } catch (e) {
+      console.error('Failed to save items to AsyncStorage', e);
+    }
+  }
+
+  // Daten laden
+  async function loadToDoItems() {
+    try {
+      const jsonValue = await AsyncStorage.getItem('toDoItems');
+      return jsonValue != null ? JSON.parse(jsonValue) : [];
+    } catch (e) {
+      console.error('Failed to load items from AsyncStorage', e);
+      return [];
+    }
+  }
+
+  // Lade die To-Do-Items beim Start der App
+  useEffect(() => {
+    loadToDoItems().then(setTodoItems);
+  }, []);
+
+  // Speichere die To-Do-Items jedes Mal, wenn sie sich ändern
+  useEffect(() => {
+    saveToDoItems(toDoItem);
+  }, [toDoItem]);
+
   return (
     <>
       <StatusBar style="auto" />
@@ -99,7 +130,7 @@ export default function App() {
         </View>
         <ToDoInput
           visible={modalVisible}
-          onAddToDoItem={selectedItem ? editToDoItemHandler : addToDoItemHandler} 
+          onAddToDoItem={selectedItem ? editToDoItemHandler : addToDoItemHandler}
           onCancel={endAddToDoItemHandler}
           initialText={selectedItem ? selectedItem.text : ''}
         />
@@ -123,6 +154,7 @@ const styles = StyleSheet.create({
     color: '#545F71',
   },
   listContainer: {
+    flex: 5,
     marginTop: 20,
   },
   addContainer: {
